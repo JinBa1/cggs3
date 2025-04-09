@@ -55,10 +55,12 @@ MatrixXd ARAP_deformation(const MatrixXd& origV,
         //Global step: rotate each edge ij by (Ri+Rj)/2 for the previous or initial iteration's R (see Lecture notes) and try to integrate to it
         for (int j=0;j<E.rows();j++){
             Matrix3d REdge = (R[E(j,0)]+R[E(j,1)])/2;
-            g.row(j) = (origV.row(E(j,0)) - origV.row(E(j,1)))*REdge;
+            // g.row(j) = (origV.row(E(j,0)) - origV.row(E(j,1)))*REdge;  //TODO bug 1?
+            g.row(j) = (origV.row(E(j,1)) - origV.row(E(j,0)))*REdge;
         }
         
-        MatrixXd rhs = d0I.transpose() * (g - d0B*constPositions);
+        // MatrixXd rhs = d0I.transpose() * (g - d0B*constPositions); //TODO bug 2?
+        MatrixXd rhs = d0I.transpose() * W * (g - d0B*constPositions);
         MatrixXd x = solver.solve(rhs);
         for (int j=0;j<constPositions.rows();j++)
             currV.row(constHandles(j))=constPositions.row(j);
@@ -71,26 +73,26 @@ MatrixXd ARAP_deformation(const MatrixXd& origV,
             Matrix3d S;
             for (int k=0;k<oneRings[j].size();k++){
                 P.row(k) = origV.row(oneRings[j][k]) - origV.row(j);
-                P.row(k) = origV.row(oneRings[j][k]) - origV.row(j);
                 Q.row(k) = currV.row(oneRings[j][k]) - currV.row(j);
-                Q.row(k) = currV.row(oneRings[j][k]) - currV.row(j);
-                S = Q.transpose()*P;
-                Eigen::JacobiSVD<Eigen::Matrix3d> svd(S, Eigen::ComputeFullU | Eigen::ComputeFullV);
-                Eigen::Matrix3d U = svd.matrixU();
-                Eigen::Vector3d Sigma = svd.singularValues();
-                Eigen::Matrix3d Vt = svd.matrixV().transpose();
-                
-                Matrix3d currR = U*Vt;
-                if (currR.determinant()<0.0){
-                    //check where the smallest singular values falls
-                    int minValue, minIndex;
-                    minValue = Sigma.minCoeff(&minIndex);
-                    Matrix3d newSigma = Matrix3d::Identity();
-                    newSigma(minIndex, minIndex) = -1;
-                    currR = U*newSigma*Vt;
-                }
-                R[j] = currR;
+
             }
+
+            S = Q.transpose()*P;
+            Eigen::JacobiSVD<Eigen::Matrix3d> svd(S, Eigen::ComputeFullU | Eigen::ComputeFullV);
+            Eigen::Matrix3d U = svd.matrixU();
+            Eigen::Vector3d Sigma = svd.singularValues();
+            Eigen::Matrix3d Vt = svd.matrixV().transpose();
+
+            Matrix3d currR = U*Vt;
+            if (currR.determinant()<0.0){
+                //check where the smallest singular values falls
+                int minValue, minIndex;
+                minValue = Sigma.minCoeff(&minIndex);
+                Matrix3d newSigma = Matrix3d::Identity();
+                newSigma(minIndex, minIndex) = -1;
+                currR = U*newSigma*Vt;
+            }
+            R[j] = currR;
         }
     }
     return currV;

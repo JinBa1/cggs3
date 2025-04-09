@@ -52,8 +52,11 @@ void callback_function() {
             double sqrDistance = forceDirection.squaredNorm();
             if (sqrDistance > 4.1*sqrRadius){  //Otherwise the objects are too close and it will overshoot (tunnelling)
                 forceDirection.normalize();
-                forces.row(i).array() = forces.row(i) - forceDirection * gravityConstant / sqrDistance;
-                forces.row(j).array() = forces.row(j) + forceDirection * gravityConstant / sqrDistance;
+                // forces.row(i).array() = forces.row(i) - forceDirection * gravityConstant / sqrDistance;
+                // forces.row(j).array() = forces.row(j) + forceDirection * gravityConstant / sqrDistance;
+
+                forces.row(i).array() = forces.row(i) + forceDirection * gravityConstant / sqrDistance;
+                forces.row(j).array() = forces.row(j) - forceDirection * gravityConstant / sqrDistance;
             }
         }
     }
@@ -68,7 +71,8 @@ void callback_function() {
             RowVector3d colNormal = spherePoses.row(j) - spherePoses.row(i);
             double sqrDistance = colNormal.squaredNorm();
             //Explicitly finding out intersection between any two spheres
-            if (sqrDistance < 2 * sqrRadius){
+            // if (sqrDistance < 2 * sqrRadius){
+            if (sqrDistance < 4.0 * sqrRadius){
                 colNormal.normalize();
                 double colDist = 2.0 * radius - sqrt(sqrDistance);
                 //Resolving interpenetration equally since masses and radii are equal
@@ -85,7 +89,8 @@ void callback_function() {
         //Resolving collision between each sphere and the ground
         if (spherePoses(i,1) < radius){
             spherePoses(i, 1) = radius;
-            if (sphereVelocities(i, 1) > 0.0)
+            // if (sphereVelocities(i, 1) > 0.0)
+            if (sphereVelocities(i, 1) < 0.0)
                 sphereVelocities(i, 1) = - CRCoeff * sphereVelocities(i, 1);
         }
     }
